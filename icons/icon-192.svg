@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient (Moden & Techy) -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" /> <!-- Indigo -->
+      <stop offset="100%" stop-color="#06B6D4" /> <!-- Cyan -->
+    </linearGradient>
+    <!-- Icon Glow/Shadow -->
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background App Icon (Rounded Corners standard PWA) -->
+  <rect width="512" height="512" rx="110" fill="url(#bgGrad)"/>
+
+  <!-- Main Icon Group -->
+  <g filter="url(#dropShadow)" fill="white">
+    <!-- Elemen Student: Buku Nota / Sijil (Base) -->
+    <path d="M160,120 C140,120 120,140 120,160 L120,380 C120,400 140,420 160,420 L360,420 C380,420 400,400 400,380 L400,160 C400,140 380,120 360,120 Z" opacity="0.15"/>
+    
+    <!-- Topi Graduasi / Mortarboard (Elemen Student Jelas) -->
+    <path d="M256,130 L380,180 L256,230 L132,180 Z"/>
+    <path d="M180,210 L180,270 C180,290 214,310 256,310 C298,310 332,290 332,270 L332,210" stroke="white" stroke-width="12" fill="none"/>
+    <!-- Tassel/Tali Topi -->
+    <path d="M380,180 L395,240 L390,250" stroke="white" stroke-width="6" fill="none"/>
+
+    <!-- Elemen Hutang/Kira-kira: Simbol Plus, Minus & Dollar (Kat bahagian bawah) -->
+    <!-- Simbol Tolak (Hutang berkurang) -->
+    <rect x="180" y="345" width="40" height="12" rx="6"/>
+    <!-- Simbol Tambah (Hutang bertambah) -->
+    <g transform="translate(290, 330)">
+      <rect x="14" y="0" width="12" height="40" rx="6"/>
+      <rect x="0" y="14" width="40" height="12" rx="6"/>
+    </g>
+    <!-- Simbol Dollar/RM yang minimalist di tengah -->
+    <path d="M246,335 C246,330 250,326 256,326 C262,326 266,330 266,335 C266,342 246,345 246,353 C246,358 250,362 256,362 C262,362 266,358 266,355 M256,322 L256,366" stroke="white" stroke-width="8" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>

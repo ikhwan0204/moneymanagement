@@ -1,0 +1,2032 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KiraHutang">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>KiraHutang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+:root {
+  --bg: #0a0a14;
+  --bg2: #111122;
+  --surface: #16162a;
+  --surface2: #1e1e38;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #f0f0ff;
+  --text2: #9090b8;
+  --text3: #5a5a80;
+  --accent: #7c5cfc;
+  --accent2: #a07cff;
+  --accent-glow: rgba(124,92,252,0.3);
+  --green: #22d3a0;
+  --green-dim: rgba(34,211,160,0.15);
+  --red: #ff5f7e;
+  --red-dim: rgba(255,95,126,0.15);
+  --amber: #ffb830;
+  --amber-dim: rgba(255,184,48,0.15);
+  --blue: #38bdf8;
+  --blue-dim: rgba(56,189,248,0.15);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { height: 100%; scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  padding-bottom: calc(80px + var(--safe-bottom));
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── NOISE TEXTURE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 999;
+}
+
+/* ── GRADIENT ORBS ── */
+.orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+.orb-1 { width: 300px; height: 300px; background: rgba(124,92,252,0.12); top: -80px; right: -60px; }
+.orb-2 { width: 250px; height: 250px; background: rgba(34,211,160,0.08); bottom: 20%; left: -80px; }
+
+/* ── PAGES ── */
+.page { display: none; position: relative; z-index: 1; }
+.page.active { display: block; animation: fadeUp 0.35s ease; }
+@keyframes fadeUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(70px + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: rgba(10,10,20,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-around;
+  z-index: 100;
+  padding-top: 8px;
+}
+.nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text3);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: color 0.2s;
+  padding: 4px 16px;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+.nav-btn svg { width: 22px; height: 22px; transition: transform 0.2s; }
+.nav-btn.active { color: var(--accent2); }
+.nav-btn.active svg { transform: scale(1.1); }
+
+/* ── HEADER ── */
+.page-header {
+  padding: calc(var(--safe-top) + 20px) 20px 0;
+  margin-bottom: 24px;
+}
+.page-header h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+.page-header p { font-size: 13px; color: var(--text3); margin-top: 2px; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin: 0 16px 14px;
+}
+.card-sm {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+}
+
+/* ── DASHBOARD HERO ── */
+.hero-card {
+  margin: 0 16px 14px;
+  background: linear-gradient(135deg, #1a0d3d 0%, #0d1a3d 50%, #0d2d2a 100%);
+  border: 1px solid rgba(124,92,252,0.3);
+  border-radius: 20px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.hero-card::before {
+  content: '';
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 150px; height: 150px;
+  background: radial-gradient(circle, rgba(124,92,252,0.25) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.hero-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--text3);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.hero-amount {
+  font-family: 'Syne', sans-serif;
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: #fff;
+  line-height: 1;
+}
+.hero-amount .currency {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--accent2);
+  margin-right: 4px;
+}
+.hero-meta { display: flex; gap: 16px; margin-top: 16px; }
+.hero-meta-item { }
+.hero-meta-item .mval {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.hero-meta-item .mlabel {
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── STAT GRID ── */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 16px 14px; }
+.stat-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.stat-tile::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  border-radius: 2px;
+}
+.stat-tile.red::after { background: var(--red); }
+.stat-tile.green::after { background: var(--green); }
+.stat-tile.amber::after { background: var(--amber); }
+.stat-tile.blue::after { background: var(--blue); }
+.stat-val {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  margin-top: 6px;
+  letter-spacing: -0.5px;
+}
+.stat-val.red { color: var(--red); }
+.stat-val.green { color: var(--green); }
+.stat-val.amber { color: var(--amber); }
+.stat-val.blue { color: var(--blue); }
+.stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+.stat-icon { font-size: 20px; margin-bottom: 2px; }
+
+/* ── PROVIDER PILLS ── */
+.provider-breakdown { margin: 0 16px 14px; }
+.provider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.provider-row:last-child { border-bottom: none; }
+.provider-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.provider-name { flex: 1; font-size: 13px; font-weight: 600; }
+.provider-bar-wrap { width: 80px; height: 4px; background: var(--surface2); border-radius: 4px; }
+.provider-bar { height: 4px; border-radius: 4px; transition: width 0.5s ease; }
+.provider-amt { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; min-width: 72px; text-align: right; }
+
+/* ── SECTION TITLE ── */
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin: 0 16px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.section-title a {
+  font-size: 11px;
+  color: var(--accent2);
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ── ADD FORM ── */
+.form-group { margin-bottom: 14px; }
+.form-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  display: block;
+  margin-bottom: 7px;
+}
+.form-input, .form-select {
+  width: 100%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+.form-input:focus, .form-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.form-input::placeholder { color: var(--text3); }
+.form-select option { background: #1e1e38; }
+
+.amount-wrap { position: relative; }
+.amount-prefix {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  color: var(--accent2);
+  font-size: 15px;
+  pointer-events: none;
+}
+.amount-wrap .form-input { padding-left: 40px; }
+
+/* ── BUTTONS ── */
+.btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px rgba(124,92,252,0.4);
+}
+.btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+.btn-secondary {
+  background: var(--surface2);
+  color: var(--text2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 12px 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s;
+}
+.btn-secondary:active { background: var(--surface); }
+
+/* ── TRANSACTION LIST ── */
+.tx-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+  position: relative;
+}
+.tx-item:last-child { border-bottom: none; }
+.tx-item.paid { opacity: 0.5; }
+.tx-item.overdue { background: rgba(255,95,126,0.06); }
+.tx-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.tx-info { flex: 1; min-width: 0; }
+.tx-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx-name.paid { text-decoration: line-through; color: var(--text3); }
+.tx-month { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.tx-due { font-size: 10px; margin-top: 3px; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; }
+.tx-due.overdue { color: var(--red); }
+.tx-due.soon { color: var(--amber); }
+.tx-due.ok { color: var(--text3); font-weight: 600; }
+.tx-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.tx-amount { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
+.tx-amount.paid { color: var(--text3); text-decoration: line-through; }
+.tx-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+.tx-badge.unpaid { background: var(--red-dim); color: var(--red); }
+.tx-badge.paid-badge { background: var(--green-dim); color: var(--green); }
+.tx-badge.overdue-badge { background: var(--red); color: #fff; }
+
+/* ── CHECKBOX ── */
+.custom-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 2px solid var(--border2);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.custom-check.checked { background: var(--green); border-color: var(--green); }
+.custom-check svg { display: none; }
+.custom-check.checked svg { display: block; }
+
+/* ── DELETE SWIPE ── */
+.tx-delete {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  transition: color 0.2s, background 0.2s;
+  flex-shrink: 0;
+}
+.tx-delete:active { color: var(--red); background: var(--red-dim); }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text3);
+}
+.empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; }
+
+/* ── FILTER TABS ── */
+.filter-tabs { display: flex; gap: 8px; margin: 0 16px 14px; overflow-x: auto; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+.filter-tabs::-webkit-scrollbar { display: none; }
+.filter-tab {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.filter-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ── IMPORT AREA ── */
+.import-drop {
+  border: 2px dashed var(--border2);
+  border-radius: var(--radius);
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--surface2);
+  margin: 0 16px;
+}
+.import-drop.drag-over { border-color: var(--accent); background: rgba(124,92,252,0.08); }
+.import-drop-icon { font-size: 36px; margin-bottom: 10px; }
+.import-drop h3 { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.import-drop p { font-size: 12px; color: var(--text3); }
+
+/* ── IMPORT PREVIEW TABLE ── */
+.preview-table-wrap { overflow-x: auto; margin: 0 16px; border-radius: var(--radius); border: 1px solid var(--border); }
+.preview-table { width: 100%; border-collapse: collapse; min-width: 500px; }
+.preview-table th {
+  background: var(--surface2);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text3);
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.preview-table td {
+  padding: 10px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+}
+.preview-table tr:last-child td { border-bottom: none; }
+.preview-table td.amount-col { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--amber); }
+.preview-table select.col-map {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 11px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+/* ── TOAST ── */
+.toast-container { position: fixed; top: calc(var(--safe-top) + 16px); left: 0; right: 0; z-index: 500; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
+.toast {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.5s forwards;
+  pointer-events: auto;
+}
+@keyframes toastIn { from { opacity:0; transform: translateY(-16px) scale(0.9); } to { opacity:1; transform: translateY(0) scale(1); } }
+@keyframes toastOut { from { opacity:1; } to { opacity:0; transform: translateY(-8px); } }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.modal-overlay.show { opacity: 1; pointer-events: all; }
+.modal-sheet {
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  border: 1px solid var(--border);
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 0 0 calc(24px + var(--safe-bottom));
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.modal-overlay.show .modal-sheet { transform: translateY(0); }
+.modal-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 4px; margin: 14px auto 20px; }
+.modal-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  padding: 0 20px 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+/* ── MONTH SUMMARY CARDS ── */
+.month-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 0 16px 10px;
+  overflow: hidden;
+}
+.month-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+.month-card-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+}
+.month-card-total {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--amber);
+}
+.month-card-body { border-top: 1px solid var(--border); display: none; }
+.month-card.open .month-card-body { display: block; }
+
+/* ── CHART BAR ── */
+.mini-chart { display: flex; align-items: flex-end; gap: 6px; height: 60px; margin: 0 16px 20px; }
+.mini-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; }
+.mini-bar { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); opacity: 0.3; transition: all 0.5s ease; min-height: 3px; }
+.mini-bar.active { opacity: 1; background: linear-gradient(180deg, var(--accent2), var(--accent)); }
+.mini-bar-label { font-size: 9px; color: var(--text3); font-weight: 600; white-space: nowrap; }
+
+/* ── SCROLLABLE LIST ── */
+.list-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 0 16px 14px;
+  overflow: hidden;
+}
+
+/* ── EXPORT OPTIONS ── */
+.export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 16px; }
+.export-option {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s, background 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.export-option:active { background: var(--surface); border-color: var(--accent); }
+.export-option .exp-icon { font-size: 28px; }
+.export-option .exp-label { font-size: 12px; font-weight: 700; color: var(--text); }
+.export-option .exp-sub { font-size: 10px; color: var(--text3); }
+
+/* ── COLUMN MAPPER ── */
+.col-mapper { margin: 0 16px 14px; }
+.col-mapper-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.col-mapper-label { font-size: 12px; font-weight: 600; color: var(--text2); width: 90px; flex-shrink: 0; }
+
+/* ── PROGRESS BAR ── */
+.progress-bar-wrap { height: 6px; background: var(--surface2); border-radius: 6px; overflow: hidden; margin-top: 8px; }
+.progress-bar { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.6s ease; }
+
+/* ── INSTALL BANNER ── */
+.install-banner {
+  margin: 0 16px 14px;
+  background: linear-gradient(135deg, rgba(124,92,252,0.15), rgba(34,211,160,0.1));
+  border: 1px solid rgba(124,92,252,0.3);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.install-banner p { font-size: 13px; color: var(--text2); flex: 1; }
+.install-banner strong { color: var(--text); }
+.btn-install {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* ── OVERDUE ALERT BANNER ── */
+.overdue-alert {
+  margin: 0 16px 14px;
+  background: linear-gradient(135deg, rgba(255,95,126,0.18), rgba(255,95,126,0.06));
+  border: 1px solid rgba(255,95,126,0.35);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.overdue-alert .oa-icon { font-size: 22px; flex-shrink: 0; }
+.overdue-alert .oa-text { flex: 1; }
+.overdue-alert .oa-title { font-size: 13px; font-weight: 700; color: var(--red); }
+.overdue-alert .oa-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.overdue-alert .oa-arrow { color: var(--red); font-size: 16px; }
+
+/* ── UPCOMING DUE LIST ── */
+.due-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.due-item:last-child { border-bottom: none; }
+.due-date-pill {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: 'Syne', sans-serif;
+}
+.due-date-pill .dnum { font-size: 15px; font-weight: 800; line-height: 1; }
+.due-date-pill .dmon { font-size: 8px; font-weight: 700; text-transform: uppercase; margin-top: 2px; opacity: 0.8; }
+.due-date-pill.overdue { background: var(--red-dim); color: var(--red); }
+.due-date-pill.soon { background: var(--amber-dim); color: var(--amber); }
+.due-date-pill.ok { background: var(--surface2); color: var(--text2); }
+.due-info { flex: 1; min-width: 0; }
+.due-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.due-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.due-amt { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--text); flex-shrink: 0; }
+
+/* ── UTILITY ── */
+.divider { height: 1px; background: var(--border); margin: 16px; }
+.mt-4 { margin-top: 16px; }
+.px-4 { padding: 0 16px; }
+.flex { display: flex; }
+.gap-2 { gap: 8px; }
+.justify-between { justify-content: space-between; }
+.items-center { align-items: center; }
+.text-green { color: var(--green); }
+.text-red { color: var(--red); }
+.text-amber { color: var(--amber); }
+.scroll-list { max-height: 60vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+/* ── MONTH BALANCE BADGE ── */
+.month-balance-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.month-bal-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.06em;
+}
+.month-bal-chip.unpaid { background: var(--red-dim); color: var(--red); }
+.month-bal-chip.paid { background: var(--green-dim); color: var(--green); }
+
+/* ── EDIT MODAL ── */
+.edit-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(6px);
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.edit-modal-overlay.show { opacity: 1; pointer-events: all; }
+.edit-modal-sheet {
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  border: 1px solid var(--border2);
+  width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+  padding-bottom: calc(20px + var(--safe-bottom));
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.34,1.26,0.64,1);
+}
+.edit-modal-overlay.show .edit-modal-sheet { transform: translateY(0); }
+.edit-modal-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 4px; margin: 14px auto 0; }
+.edit-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.edit-modal-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; }
+.edit-modal-close {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text2);
+  cursor: pointer;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.edit-modal-body { padding: 0 20px; }
+.edit-action-row { display: flex; gap: 10px; margin-top: 6px; }
+.btn-save {
+  flex: 1;
+  background: var(--accent);
+  color: #fff;
+  font-family: 'Syne',sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(124,92,252,0.35);
+  transition: opacity 0.2s;
+}
+.btn-save:active { opacity: 0.85; }
+.btn-del-modal {
+  background: var(--red-dim);
+  color: var(--red);
+  border: 1px solid rgba(255,95,126,0.25);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-del-modal:active { background: rgba(255,95,126,0.25); }
+
+/* ── TX EDIT BUTTON ── */
+.tx-edit {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  transition: color 0.2s, background 0.2s;
+  flex-shrink: 0;
+}
+.tx-edit:active { color: var(--accent2); background: var(--accent-glow); }
+
+/* ── ANIMATE ── */
+.stagger-in > * { opacity: 0; animation: fadeUp 0.4s ease forwards; }
+.stagger-in > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-in > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-in > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-in > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger-in > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-in > *:nth-child(n+6) { animation-delay: 0.3s; }
+
+/* Responsive tablet/desktop */
+@media (min-width: 600px) {
+  .stat-grid { grid-template-columns: repeat(4,1fr); }
+  .export-grid { grid-template-columns: repeat(4,1fr); }
+  body { max-width: 480px; margin: 0 auto; }
+  .bottom-nav { max-width: 480px; left: 50%; transform: translateX(-50%); }
+  .toast-container { max-width: 480px; left: 50%; transform: translateX(-50%); right: auto; }
+}
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- INSTALL BANNER (hidden until PWA prompt fires) -->
+<div class="install-banner" id="installBanner" style="display:none">
+  <span style="font-size:24px">📲</span>
+  <p><strong>Pasang KiraHutang</strong> ke skrin utama anda!</p>
+  <button class="btn-install" id="installBtn">Pasang</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE 1: DASHBOARD
+═══════════════════════════════════════════ -->
+<div id="page-dashboard" class="page active">
+  <div class="page-header" style="padding-top: calc(env(safe-area-inset-top, 0px) + 20px);">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <h1>KiraHutang 💸</h1>
+        <p id="dash-subtitle">Memuat...</p>
+      </div>
+      <div style="font-size:11px;color:var(--text3);text-align:right;line-height:1.4;" id="dash-date"></div>
+    </div>
+  </div>
+
+  <div class="stagger-in" id="dashContent">
+    <!-- Overdue Alert (hidden if none) -->
+    <div class="overdue-alert" id="overdueAlert" style="display:none" onclick="switchPage('page-transactions');setFilter('overdue')">
+      <div class="oa-icon">⚠️</div>
+      <div class="oa-text">
+        <div class="oa-title" id="overdueAlertTitle">0 rekod dah lewat bayar</div>
+        <div class="oa-sub" id="overdueAlertSub">Jumlah RM 0.00</div>
+      </div>
+      <div class="oa-arrow">→</div>
+    </div>
+
+    <!-- Hero Card -->
+    <div class="hero-card">
+      <div class="hero-label">Jumlah Belum Dibayar</div>
+      <div class="hero-amount"><span class="currency">RM</span><span id="heroUnpaid">0.00</span></div>
+      <div class="hero-meta">
+        <div class="hero-meta-item">
+          <div class="mval" id="heroUnpaidCount">0</div>
+          <div class="mlabel">Transaksi</div>
+        </div>
+        <div style="width:1px;background:var(--border)"></div>
+        <div class="hero-meta-item">
+          <div class="mval" id="heroPaidCount">0</div>
+          <div class="mlabel">Selesai</div>
+        </div>
+        <div style="width:1px;background:var(--border)"></div>
+        <div class="hero-meta-item">
+          <div class="mval" id="heroTotal">RM 0</div>
+          <div class="mlabel">Keseluruhan</div>
+        </div>
+      </div>
+      <div class="progress-bar-wrap" style="margin-top:14px;">
+        <div class="progress-bar" id="heroPaidBar" style="width:0%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:5px;">
+        <span style="font-size:10px;color:var(--text3)">Peratusan dibayar</span>
+        <span style="font-size:10px;color:var(--accent2);font-weight:700" id="heroPaidPct">0%</span>
+      </div>
+    </div>
+
+    <!-- Stat Grid -->
+    <div class="stat-grid">
+      <div class="stat-tile red">
+        <div class="stat-label">Tertinggi</div>
+        <div class="stat-val red" id="statMax">RM 0</div>
+      </div>
+      <div class="stat-tile green">
+        <div class="stat-label">Bulan Ini</div>
+        <div class="stat-val green" id="statMonth">RM 0</div>
+      </div>
+      <div class="stat-tile amber">
+        <div class="stat-label">Purata/txn</div>
+        <div class="stat-val amber" id="statAvg">RM 0</div>
+      </div>
+      <div class="stat-tile blue">
+        <div class="stat-label">Total Rekod</div>
+        <div class="stat-val blue" id="statCount">0</div>
+      </div>
+    </div>
+
+    <!-- Upcoming Due Dates -->
+    <div class="section-title">Tarikh Akhir Terdekat</div>
+    <div class="list-wrap" id="upcomingDueList">
+      <div class="empty-state"><p>Tiada tarikh akhir ditetapkan</p></div>
+    </div>
+
+    <!-- Mini Chart -->
+    <div class="section-title">Carta Bulanan</div>
+    <div class="mini-chart" id="miniChart"></div>
+
+    <!-- Provider Breakdown -->
+    <div class="section-title">Mengikut Penyedia</div>
+    <div class="card" style="padding:8px 16px;" id="providerBreakdown">
+      <div class="empty-state"><p>Belum ada data</p></div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="section-title">
+      Transaksi Terkini
+      <a onclick="switchPage('page-transactions')">Lihat semua →</a>
+    </div>
+    <div class="list-wrap" id="recentList">
+      <div class="empty-state"><p>Belum ada rekod</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE 2: TRANSACTIONS
+═══════════════════════════════════════════ -->
+<div id="page-transactions" class="page">
+  <div class="page-header">
+    <h1>Transaksi</h1>
+    <p>Semua rekod pembayaran anda</p>
+  </div>
+
+  <!-- Filter tabs -->
+  <div class="filter-tabs" id="filterTabs">
+    <div class="filter-tab active" data-filter="all">Semua</div>
+    <div class="filter-tab" data-filter="unpaid">Belum Bayar</div>
+    <div class="filter-tab" data-filter="overdue">Lewat</div>
+    <div class="filter-tab" data-filter="paid">Sudah Bayar</div>
+    <div class="filter-tab" data-filter="Januari">Jan</div>
+    <div class="filter-tab" data-filter="Februari">Feb</div>
+    <div class="filter-tab" data-filter="Mac">Mac</div>
+    <div class="filter-tab" data-filter="April">Apr</div>
+    <div class="filter-tab" data-filter="Mei">Mei</div>
+    <div class="filter-tab" data-filter="Jun">Jun</div>
+    <div class="filter-tab" data-filter="Julai">Jul</div>
+    <div class="filter-tab" data-filter="Ogos">Ogs</div>
+    <div class="filter-tab" data-filter="September">Sep</div>
+    <div class="filter-tab" data-filter="Oktober">Okt</div>
+    <div class="filter-tab" data-filter="November">Nov</div>
+    <div class="filter-tab" data-filter="Disember">Dis</div>
+  </div>
+
+  <!-- Month Summary accordion -->
+  <div id="monthAccordions"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE 3: ADD RECORD
+═══════════════════════════════════════════ -->
+<div id="page-add" class="page">
+  <div class="page-header">
+    <h1>Tambah Rekod</h1>
+    <p>Masukkan hutang / bayaran BNPL baru</p>
+  </div>
+
+  <div class="card">
+    <div class="form-group">
+      <label class="form-label">Bulan</label>
+      <select id="addMonth" class="form-select">
+        <option>Januari</option><option>Februari</option><option>Mac</option><option>April</option>
+        <option>Mei</option><option>Jun</option><option>Julai</option><option>Ogos</option>
+        <option>September</option><option>Oktober</option><option>November</option><option>Disember</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Penyedia</label>
+      <select id="addName" class="form-select">
+        <option value="BOOST PAYFLEX">🚀 BOOST PAYFLEX</option>
+        <option value="SPAYLATER">🛍️ SPAYLATER</option>
+        <option value="TIKTOKLATER">🎵 TIKTOKLATER</option>
+        <option value="ATOME">⚛️ ATOME</option>
+        <option value="ATOME CARD">💳 ATOME CARD</option>
+        <option value="TIKTOK FINANCING">🎵 TIKTOK FINANCING</option>
+        <option value="SFinancing-i">🏦 SFinancing-i</option>
+        <option value="Lain-lain">📦 Lain-lain</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Jumlah (RM)</label>
+      <div class="amount-wrap">
+        <span class="amount-prefix">RM</span>
+        <input type="number" id="addAmount" placeholder="0.00" step="0.01" min="0" class="form-input" inputmode="decimal">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tarikh Akhir Bayaran (Pilihan)</label>
+      <input type="date" id="addDueDate" class="form-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nota (Pilihan)</label>
+      <input type="text" id="addNote" placeholder="Beli apa-apa..." class="form-input">
+    </div>
+    <button class="btn-primary" onclick="addDebt()">
+      ＋ Tambah Rekod
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PAGE 4: IMPORT / EXPORT
+═══════════════════════════════════════════ -->
+<div id="page-import" class="page">
+  <div class="page-header">
+    <h1>Import & Eksport</h1>
+    <p>Urus data Excel anda</p>
+  </div>
+
+  <!-- Import -->
+  <div class="section-title">Import dari Excel</div>
+  <div class="import-drop" id="importDrop" onclick="document.getElementById('fileInput').click()">
+    <div class="import-drop-icon">📊</div>
+    <h3>Muat naik fail Excel</h3>
+    <p>Klik atau seret fail .xlsx / .xls / .csv ke sini</p>
+    <p style="margin-top:8px;color:var(--accent2);font-size:11px;font-weight:700;">Sokong format lama & baru</p>
+  </div>
+  <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileImport(event)">
+
+  <!-- Preview will appear here -->
+  <div id="importPreviewSection" style="display:none">
+    <div class="divider"></div>
+    <div class="section-title">
+      Pratonton Data
+      <a onclick="cancelImport()">Batal</a>
+    </div>
+
+    <!-- Column mapper -->
+    <div style="margin:0 16px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;">
+      <p style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px;">📋 Padankan lajur Excel dengan medan:</p>
+      <div id="colMapperRows"></div>
+    </div>
+
+    <div class="preview-table-wrap" id="previewTableWrap"></div>
+
+    <div style="margin:14px 16px 0;">
+      <button class="btn-primary" id="confirmImportBtn" onclick="confirmImport()">
+        ✅ Import Data
+      </button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Export -->
+  <div class="section-title">Eksport Data</div>
+  <div class="export-grid">
+    <div class="export-option" onclick="exportExcel()">
+      <div class="exp-icon">📗</div>
+      <div class="exp-label">Excel</div>
+      <div class="exp-sub">Format .xlsx</div>
+    </div>
+    <div class="export-option" onclick="exportCSV()">
+      <div class="exp-icon">📄</div>
+      <div class="exp-label">CSV</div>
+      <div class="exp-sub">Format .csv</div>
+    </div>
+    <div class="export-option" onclick="exportJSON()">
+      <div class="exp-icon">🔧</div>
+      <div class="exp-label">Backup</div>
+      <div class="exp-sub">Format JSON</div>
+    </div>
+    <div class="export-option" onclick="importJSON()">
+      <div class="exp-icon">♻️</div>
+      <div class="exp-label">Pulihkan</div>
+      <div class="exp-sub">Dari JSON</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Danger zone -->
+  <div style="margin:0 16px;">
+    <button onclick="clearAll()" style="width:100%;background:var(--red-dim);color:var(--red);border:1px solid rgba(255,95,126,0.3);border-radius:var(--radius-sm);padding:14px;font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;">
+      🗑️ Kosongkan Semua Data
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     EDIT MODAL (bottom sheet)
+═══════════════════════════════════════════ -->
+<div class="edit-modal-overlay" id="editModalOverlay" onclick="closeEditModal(event)">
+  <div class="edit-modal-sheet">
+    <div class="edit-modal-handle"></div>
+    <div class="edit-modal-header">
+      <div class="edit-modal-title">✏️ Edit Rekod</div>
+      <button class="edit-modal-close" onclick="closeEditModal()">Tutup</button>
+    </div>
+    <div class="edit-modal-body">
+      <input type="hidden" id="editId">
+      <div class="form-group">
+        <label class="form-label">Bulan</label>
+        <select id="editMonth" class="form-select">
+          <option>Januari</option><option>Februari</option><option>Mac</option><option>April</option>
+          <option>Mei</option><option>Jun</option><option>Julai</option><option>Ogos</option>
+          <option>September</option><option>Oktober</option><option>November</option><option>Disember</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Penyedia</label>
+        <select id="editName" class="form-select">
+          <option value="BOOST PAYFLEX">🚀 BOOST PAYFLEX</option>
+          <option value="SPAYLATER">🛍️ SPAYLATER</option>
+          <option value="TIKTOKLATER">🎵 TIKTOKLATER</option>
+          <option value="ATOME">⚛️ ATOME</option>
+          <option value="ATOME CARD">💳 ATOME CARD</option>
+          <option value="TIKTOK FINANCING">🎵 TIKTOK FINANCING</option>
+          <option value="SFinancing-i">🏦 SFinancing-i</option>
+          <option value="Lain-lain">📦 Lain-lain</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Jumlah (RM)</label>
+        <div class="amount-wrap">
+          <span class="amount-prefix">RM</span>
+          <input type="number" id="editAmount" step="0.01" min="0" class="form-input" inputmode="decimal">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tarikh Akhir Bayaran (Pilihan)</label>
+        <input type="date" id="editDueDate" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nota (Pilihan)</label>
+        <input type="text" id="editNote" placeholder="Nota..." class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status Bayaran</label>
+        <div style="display:flex;gap:10px;">
+          <button id="editStatusUnpaid" onclick="setEditStatus(false)"
+            style="flex:1;padding:12px;border-radius:var(--radius-sm);border:2px solid var(--red);background:var(--red-dim);color:var(--red);font-weight:700;font-size:13px;cursor:pointer;transition:all 0.2s;">
+            ⏳ Belum Bayar
+          </button>
+          <button id="editStatusPaid" onclick="setEditStatus(true)"
+            style="flex:1;padding:12px;border-radius:var(--radius-sm);border:2px solid var(--border);background:transparent;color:var(--text3);font-weight:700;font-size:13px;cursor:pointer;transition:all 0.2s;">
+            ✅ Sudah Bayar
+          </button>
+        </div>
+      </div>
+      <div class="edit-action-row">
+        <button class="btn-save" onclick="saveEdit()">💾 Simpan Perubahan</button>
+        <button class="btn-del-modal" onclick="deleteFromEdit()">🗑️</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     BOTTOM NAVIGATION
+═══════════════════════════════════════════ -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-dashboard" onclick="switchPage('page-dashboard')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+    Dashboard
+  </button>
+  <button class="nav-btn" id="nav-transactions" onclick="switchPage('page-transactions')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    Rekod
+  </button>
+  <button class="nav-btn" id="nav-add" onclick="switchPage('page-add')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+    Tambah
+  </button>
+  <button class="nav-btn" id="nav-import" onclick="switchPage('page-import')">
+    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+    Import/Export
+  </button>
+</nav>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────
+let debts = JSON.parse(localStorage.getItem('kirahutang-v2') || '[]');
+let importPreviewData = [];
+let importRawData = [];
+let currentFilter = 'all';
+let deferredPrompt = null;
+
+const BULAN = ["Januari","Februari","Mac","April","Mei","Jun","Julai","Ogos","September","Oktober","November","Disember"];
+const BULAN_SHORT = ["Jan","Feb","Mac","Apr","Mei","Jun","Jul","Ogs","Sep","Okt","Nov","Dis"];
+
+const PROVIDER_COLORS = {
+  "BOOST PAYFLEX":  "#ff6b35",
+  "SPAYLATER":      "#ff3399",
+  "TIKTOKLATER":    "#69c9d0",
+  "ATOME":          "#33cc66",
+  "ATOME CARD":     "#22aabb",
+  "TIKTOK FINANCING":"#ee1d52",
+  "SFinancing-i":   "#ffb830",
+  "Lain-lain":      "#9090b8",
+};
+const PROVIDER_ICONS = {
+  "BOOST PAYFLEX":"🚀","SPAYLATER":"🛍️","TIKTOKLATER":"🎵",
+  "ATOME":"⚛️","ATOME CARD":"💳","TIKTOK FINANCING":"🎵",
+  "SFinancing-i":"🏦","Lain-lain":"📦",
+};
+
+// ─── DUE DATE HELPERS ────────────────────────────────────────
+// Returns { days, state } where state is 'overdue' | 'soon' | 'ok'
+// days = number of days until due (negative if overdue)
+function dueInfo(dueDateStr) {
+  if(!dueDateStr) return null;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const due = new Date(dueDateStr + 'T00:00:00');
+  const diffMs = due - today;
+  const days = Math.round(diffMs / 86400000);
+  let state = 'ok';
+  if(days < 0) state = 'overdue';
+  else if(days <= 3) state = 'soon';
+  return { days, state, due };
+}
+
+function fmtDueDate(dueDateStr) {
+  const d = new Date(dueDateStr + 'T00:00:00');
+  return d.toLocaleDateString('ms-MY', {day:'numeric', month:'short', year:'numeric'});
+}
+
+function dueLabel(info) {
+  if(!info) return '';
+  if(info.state === 'overdue') {
+    const n = Math.abs(info.days);
+    return `⚠️ LEWAT ${n} hari`;
+  }
+  if(info.days === 0) return '🔥 Due hari ini';
+  if(info.state === 'soon') return `⏰ ${info.days} hari lagi`;
+  return `📅 ${info.days} hari lagi`;
+}
+
+function isOverdue(d) {
+  if(d.paid || !d.dueDate) return false;
+  const info = dueInfo(d.dueDate);
+  return info && info.state === 'overdue';
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────
+function switchPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  const navId = 'nav-' + pageId.replace('page-','');
+  const navBtn = document.getElementById(navId);
+  if(navBtn) navBtn.classList.add('active');
+  window.scrollTo(0,0);
+  if(pageId === 'page-dashboard') updateDashboard();
+  if(pageId === 'page-transactions') renderTransactions();
+}
+
+function setFilter(filterKey) {
+  currentFilter = filterKey;
+  document.querySelectorAll('.filter-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.filter === filterKey);
+  });
+  renderTransactions();
+}
+
+// ─── STORAGE ─────────────────────────────────────────────────
+function save() {
+  localStorage.setItem('kirahutang-v2', JSON.stringify(debts));
+}
+
+// ─── TOAST ───────────────────────────────────────────────────
+function toast(msg, icon='✅') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ─── ADD DEBT ────────────────────────────────────────────────
+function addDebt() {
+  const month = document.getElementById('addMonth').value;
+  const name = document.getElementById('addName').value;
+  const amount = parseFloat(document.getElementById('addAmount').value);
+  const dueDate = document.getElementById('addDueDate').value || '';
+  const note = document.getElementById('addNote').value.trim();
+  if(!amount || amount <= 0) { toast('Masukkan jumlah yang sah!','⚠️'); return; }
+  debts.push({ id: Date.now(), month, name, amount, dueDate, note, paid: false, addedAt: new Date().toISOString() });
+  save();
+  document.getElementById('addAmount').value = '';
+  document.getElementById('addDueDate').value = '';
+  document.getElementById('addNote').value = '';
+  toast(`${name} — RM ${amount.toFixed(2)} ditambah!`);
+  switchPage('page-dashboard');
+}
+
+// ─── TOGGLE PAID ─────────────────────────────────────────────
+function togglePaid(id) {
+  const debt = debts.find(d => d.id === id);
+  if(!debt) return;
+  debt.paid = !debt.paid;
+  save();
+  renderTransactions();
+  updateDashboard();
+
+  // Calculate remaining unpaid for that month
+  const monthUnpaid = debts
+    .filter(d => d.month === debt.month && !d.paid)
+    .reduce((s,d) => s + d.amount, 0);
+
+  if(debt.paid) {
+    if(monthUnpaid === 0) {
+      toast(`${debt.month} — Semua selesai! 🎉`, '✅');
+    } else {
+      toast(`Baki ${debt.month}: RM ${fmtNum(monthUnpaid)} lagi`, '✅');
+    }
+  } else {
+    toast(`Ditandakan belum bayar · Baki: RM ${fmtNum(monthUnpaid + debt.amount)}`, '🔄');
+  }
+}
+
+// ─── DELETE ──────────────────────────────────────────────────
+function deleteDebt(id) {
+  if(!confirm('Padam rekod ini?')) return;
+  debts = debts.filter(d => d.id !== id);
+  save();
+  renderTransactions();
+  updateDashboard();
+  toast('Rekod dipadam','🗑️');
+}
+
+// ─── CLEAR ALL ───────────────────────────────────────────────
+function clearAll() {
+  if(!confirm('⚠️ Semua data akan dipadam kekal. Teruskan?')) return;
+  debts = [];
+  save();
+  updateDashboard();
+  renderTransactions();
+  toast('Data dikosongkan','🗑️');
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────────
+function updateDashboard() {
+  const now = new Date();
+  const curMonthName = BULAN[now.getMonth()];
+  document.getElementById('dash-date').innerHTML = `${now.toLocaleDateString('ms-MY',{weekday:'short',day:'numeric',month:'short'})}<br>${now.getFullYear()}`;
+
+  const total = debts.reduce((s,d) => s + d.amount, 0);
+  const unpaid = debts.filter(d => !d.paid);
+  const paid = debts.filter(d => d.paid);
+  const unpaidTotal = unpaid.reduce((s,d) => s + d.amount, 0);
+  const paidPct = total > 0 ? Math.round((paid.reduce((s,d)=>s+d.amount,0)/total)*100) : 0;
+  const curMonth = debts.filter(d => d.month === curMonthName).reduce((s,d)=>s+d.amount,0);
+  const maxDebt = debts.length ? Math.max(...debts.map(d=>d.amount)) : 0;
+  const avg = debts.length ? total/debts.length : 0;
+
+  document.getElementById('heroUnpaid').textContent = fmtNum(unpaidTotal);
+  document.getElementById('heroUnpaidCount').textContent = unpaid.length;
+  document.getElementById('heroPaidCount').textContent = paid.length;
+  document.getElementById('heroTotal').textContent = 'RM ' + fmtNum(total);
+  document.getElementById('heroPaidBar').style.width = paidPct + '%';
+  document.getElementById('heroPaidPct').textContent = paidPct + '%';
+  document.getElementById('statMax').textContent = 'RM ' + fmtNum(maxDebt);
+  document.getElementById('statMonth').textContent = 'RM ' + fmtNum(curMonth);
+  document.getElementById('statAvg').textContent = 'RM ' + fmtNum(avg);
+  document.getElementById('statCount').textContent = debts.length;
+  document.getElementById('dash-subtitle').textContent = debts.length
+    ? `${debts.length} rekod · ${curMonthName} ${now.getFullYear()}`
+    : 'Tiada rekod lagi';
+
+  renderOverdueAlert();
+  renderUpcomingDue();
+  renderMiniChart();
+  renderProviderBreakdown();
+  renderRecentList();
+}
+
+function fmtNum(n) {
+  return Number(n).toLocaleString('ms-MY', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+// ─── OVERDUE ALERT ───────────────────────────────────────────
+function renderOverdueAlert() {
+  const banner = document.getElementById('overdueAlert');
+  const overdueList = debts.filter(isOverdue);
+  if(!overdueList.length) { banner.style.display = 'none'; return; }
+  const total = overdueList.reduce((s,d)=>s+d.amount,0);
+  document.getElementById('overdueAlertTitle').textContent = `${overdueList.length} rekod dah lewat bayar!`;
+  document.getElementById('overdueAlertSub').textContent = `Jumlah RM ${fmtNum(total)} · Tekan untuk lihat`;
+  banner.style.display = 'flex';
+}
+
+// ─── UPCOMING DUE LIST (dashboard) ──────────────────────────
+function renderUpcomingDue() {
+  const wrap = document.getElementById('upcomingDueList');
+  const withDue = debts
+    .filter(d => !d.paid && d.dueDate)
+    .map(d => ({ d, info: dueInfo(d.dueDate) }))
+    .sort((a,b) => a.info.days - b.info.days)
+    .slice(0, 6);
+
+  if(!withDue.length) {
+    wrap.innerHTML = '<div class="empty-state"><p>Tiada tarikh akhir ditetapkan</p></div>';
+    return;
+  }
+
+  wrap.innerHTML = withDue.map(({d,info}) => {
+    const dt = new Date(d.dueDate + 'T00:00:00');
+    const icon = PROVIDER_ICONS[d.name] || '📦';
+    return `<div class="due-item">
+      <div class="due-date-pill ${info.state}">
+        <div class="dnum">${dt.getDate()}</div>
+        <div class="dmon">${BULAN_SHORT[dt.getMonth()]}</div>
+      </div>
+      <div class="due-info">
+        <div class="due-name">${icon} ${d.name}</div>
+        <div class="due-sub">${dueLabel(info)}</div>
+      </div>
+      <div class="due-amt">RM ${fmtNum(d.amount)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderMiniChart() {
+  const chart = document.getElementById('miniChart');
+  const monthTotals = {};
+  BULAN.forEach((b,i) => monthTotals[b] = { val:0, idx:i });
+  debts.forEach(d => { if(monthTotals[d.month]) monthTotals[d.month].val += d.amount; });
+  const vals = BULAN.map(b => monthTotals[b].val);
+  const maxVal = Math.max(...vals, 1);
+  const now = new Date();
+  const curMonthIdx = now.getMonth();
+
+  chart.innerHTML = BULAN.map((b,i) => {
+    const h = Math.max(4, Math.round((vals[i]/maxVal)*54));
+    const active = i === curMonthIdx ? 'active' : '';
+    return `<div class="mini-bar-wrap">
+      <div class="mini-bar ${active}" style="height:${h}px" title="${b}: RM ${fmtNum(vals[i])}"></div>
+      <div class="mini-bar-label">${BULAN_SHORT[i]}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderProviderBreakdown() {
+  const wrap = document.getElementById('providerBreakdown');
+  const totals = {};
+  debts.forEach(d => { totals[d.name] = (totals[d.name]||0) + d.amount; });
+  const sorted = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+  if(!sorted.length) { wrap.innerHTML='<div class="empty-state"><p>Belum ada data</p></div>'; return; }
+  const max = sorted[0][1];
+  wrap.innerHTML = sorted.map(([name,val]) => {
+    const pct = Math.round((val/max)*100);
+    const color = PROVIDER_COLORS[name] || '#9090b8';
+    const icon = PROVIDER_ICONS[name] || '📦';
+    return `<div class="provider-row">
+      <div class="provider-dot" style="background:${color}"></div>
+      <div class="provider-name">${icon} ${name}</div>
+      <div class="provider-bar-wrap"><div class="provider-bar" style="width:${pct}%;background:${color}"></div></div>
+      <div class="provider-amt" style="color:${color}">RM ${fmtNum(val)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderRecentList() {
+  const wrap = document.getElementById('recentList');
+  const recent = [...debts].reverse().slice(0,5);
+  if(!recent.length) { wrap.innerHTML='<div class="empty-state"><div class="emoji">💸</div><p>Belum ada rekod.<br>Tekan Tambah untuk mula.</p></div>'; return; }
+  wrap.innerHTML = recent.map(d => txRow(d)).join('');
+}
+
+// ─── TX ROW ──────────────────────────────────────────────────
+function txRow(d) {
+  const color = PROVIDER_COLORS[d.name] || '#9090b8';
+  const icon = PROVIDER_ICONS[d.name] || '📦';
+  const paidClass = d.paid ? 'paid' : '';
+  const overdue = isOverdue(d);
+
+  let dueHtml = '';
+  if(d.dueDate) {
+    const info = dueInfo(d.dueDate);
+    const cls = d.paid ? 'ok' : info.state;
+    dueHtml = `<div class="tx-due ${cls}">${fmtDueDate(d.dueDate)} ${!d.paid ? '· ' + dueLabel(info) : ''}</div>`;
+  }
+
+  let badgeHtml = d.paid ? 'BAYAR' : 'BELUM';
+  let badgeClass = d.paid ? 'paid-badge' : 'unpaid';
+  if(overdue) { badgeHtml = 'LEWAT'; badgeClass = 'overdue-badge'; }
+
+  return `<div class="tx-item ${paidClass} ${overdue?'overdue':''}">
+    <div class="custom-check ${d.paid?'checked':''}" onclick="togglePaid(${d.id})">
+      <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+    </div>
+    <div class="tx-icon" style="background:${color}22">
+      <span>${icon}</span>
+    </div>
+    <div class="tx-info">
+      <div class="tx-name ${d.paid?'paid':''}">${d.name}</div>
+      <div class="tx-month">${d.month}${d.note ? ' · '+d.note : ''}</div>
+      ${dueHtml}
+    </div>
+    <div class="tx-right">
+      <div class="tx-amount ${d.paid?'paid':''}">RM ${fmtNum(d.amount)}</div>
+      <div class="tx-badge ${badgeClass}">${badgeHtml}</div>
+    </div>
+    <button class="tx-edit" onclick="openEditModal(${d.id})" title="Edit">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+    </button>
+    <button class="tx-delete" onclick="deleteDebt(${d.id})">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+    </button>
+  </div>`;
+}
+
+// ─── TRANSACTIONS PAGE ───────────────────────────────────────
+function renderTransactions() {
+  let filtered = [...debts];
+  if(currentFilter === 'unpaid') filtered = filtered.filter(d=>!d.paid);
+  else if(currentFilter === 'overdue') filtered = filtered.filter(d=>isOverdue(d));
+  else if(currentFilter === 'paid') filtered = filtered.filter(d=>d.paid);
+  else if(currentFilter !== 'all') filtered = filtered.filter(d=>d.month===currentFilter);
+
+  const container = document.getElementById('monthAccordions');
+  if(!filtered.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:48px 0;"><div class="emoji">🔍</div><p>Tiada rekod ditemui</p></div>';
+    return;
+  }
+
+  // Group by month in order
+  const grouped = {};
+  BULAN.forEach(b => { grouped[b] = []; });
+  filtered.forEach(d => { if(grouped[d.month]) grouped[d.month].push(d); });
+
+  let html = '';
+  BULAN.forEach(b => {
+    const items = grouped[b];
+    if(!items.length) return;
+    const total = items.reduce((s,d)=>s+d.amount,0);
+    const paidAmt = items.filter(d=>d.paid).reduce((s,d)=>s+d.amount,0);
+    const unpaidAmt = total - paidAmt;
+    const unpaidCount = items.filter(d=>!d.paid).length;
+    const paidCount = items.filter(d=>d.paid).length;
+    const allPaid = unpaidAmt === 0;
+
+    html += `<div class="month-card open">
+      <div class="month-card-header" onclick="this.parentElement.classList.toggle('open')">
+        <div>
+          <div class="month-card-title">${b} ${allPaid ? '✅' : ''}</div>
+          <div class="month-balance-wrap" style="margin-top:4px;">
+            ${unpaidCount > 0 ? `<span class="month-bal-chip unpaid">RM ${fmtNum(unpaidAmt)} belum bayar</span>` : ''}
+            ${paidCount > 0 ? `<span class="month-bal-chip paid">RM ${fmtNum(paidAmt)} selesai</span>` : ''}
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div class="month-card-total">RM ${fmtNum(total)}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px;">${items.length} rekod</div>
+        </div>
+      </div>
+      <div class="month-card-body">
+        ${items.slice().reverse().map(d => txRow(d)).join('')}
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+// Filter tab click
+document.getElementById('filterTabs').addEventListener('click', e => {
+  const tab = e.target.closest('.filter-tab');
+  if(!tab) return;
+  setFilter(tab.dataset.filter);
+});
+
+// ─── IMPORT ──────────────────────────────────────────────────
+function handleFileImport(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const wb = XLSX.read(ev.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, {header:1});
+      if(raw.length < 2) { toast('Fail kosong atau format salah','⚠️'); return; }
+      importRawData = raw;
+      showImportPreview(raw);
+    } catch(err) {
+      toast('Gagal baca fail: ' + err.message, '❌');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = '';
+}
+
+function showImportPreview(raw) {
+  const headers = raw[0].map(String);
+  const rows = raw.slice(1).filter(r => r.some(c => c !== undefined && c !== ''));
+
+  // Column mapper
+  const fields = [
+    {key:'month', label:'Bulan', required:true},
+    {key:'name', label:'Penyedia', required:true},
+    {key:'amount', label:'Jumlah (RM)', required:true},
+    {key:'dueDate', label:'Tarikh Akhir', required:false},
+    {key:'note', label:'Nota', required:false},
+    {key:'paid', label:'Status Bayar', required:false},
+  ];
+
+  // Auto-detect column mapping
+  const autoMap = {};
+  const monthKeywords = ['bulan','month','bln'];
+  const nameKeywords = ['penyedia','provider','nama','name','jenis','type'];
+  const amountKeywords = ['jumlah','amount','rm','nilai','value','harga'];
+  const dueDateKeywords = ['tarikh akhir','due date','due','tarikh tamat','tarikh bayar'];
+  const noteKeywords = ['nota','note','catatan','remark','keterangan'];
+  const paidKeywords = ['bayar','paid','status','payment'];
+
+  headers.forEach((h,i) => {
+    const hl = h.toLowerCase();
+    if(monthKeywords.some(k=>hl.includes(k)) && !autoMap.month) autoMap.month = i;
+    else if(nameKeywords.some(k=>hl.includes(k)) && !autoMap.name) autoMap.name = i;
+    else if(dueDateKeywords.some(k=>hl.includes(k)) && autoMap.dueDate===undefined) autoMap.dueDate = i;
+    else if(amountKeywords.some(k=>hl.includes(k)) && !autoMap.amount) autoMap.amount = i;
+    else if(noteKeywords.some(k=>hl.includes(k)) && !autoMap.note) autoMap.note = i;
+    else if(paidKeywords.some(k=>hl.includes(k)) && !autoMap.paid) autoMap.paid = i;
+  });
+
+  // Render mapper
+  const mapperHTML = fields.map(f => `
+    <div class="col-mapper-row">
+      <div class="col-mapper-label">${f.label}${f.required?'<span style="color:var(--red)">*</span>':''}</div>
+      <select class="form-select" style="flex:1;padding:10px;" id="map_${f.key}">
+        ${f.required ? '' : '<option value="-1">— Tiada —</option>'}
+        ${headers.map((h,i) => `<option value="${i}" ${autoMap[f.key]===i?'selected':''}>${h}</option>`).join('')}
+      </select>
+    </div>
+  `).join('');
+  document.getElementById('colMapperRows').innerHTML = mapperHTML;
+
+  // Render preview table (first 5 rows)
+  const previewRows = rows.slice(0,5);
+  const tableHTML = `<table class="preview-table">
+    <thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${previewRows.map(r=>`<tr>${headers.map((_,i)=>`<td class="${isAmountCol(headers[i])?'amount-col':''}">${r[i]??''}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table>`;
+  document.getElementById('previewTableWrap').innerHTML = tableHTML;
+  document.getElementById('importPreviewSection').style.display = 'block';
+
+  const totalRows = rows.length;
+  document.getElementById('confirmImportBtn').textContent = `✅ Import ${totalRows} rekod`;
+
+  // Store rows for import
+  importPreviewData = rows;
+  document.getElementById('importDrop').style.display = 'none';
+}
+
+function isAmountCol(header) {
+  const hl = (header||'').toLowerCase();
+  return ['jumlah','amount','rm','nilai','harga'].some(k=>hl.includes(k));
+}
+
+function cancelImport() {
+  document.getElementById('importPreviewSection').style.display = 'none';
+  document.getElementById('importDrop').style.display = 'block';
+  importPreviewData = [];
+  importRawData = [];
+}
+
+// Try to parse various date formats into YYYY-MM-DD (for <input type=date>)
+function normalizeDueDate(raw) {
+  if(raw === undefined || raw === null || raw === '') return '';
+  // Excel serial date number
+  if(typeof raw === 'number') {
+    const parsed = XLSX.SSF ? XLSX.SSF.parse_date_code(raw) : null;
+    if(parsed) {
+      const y = parsed.y, m = String(parsed.m).padStart(2,'0'), d = String(parsed.d).padStart(2,'0');
+      return `${y}-${m}-${d}`;
+    }
+  }
+  const str = String(raw).trim();
+  // Already ISO
+  if(/^\d{4}-\d{2}-\d{2}/.test(str)) return str.slice(0,10);
+  // dd/mm/yyyy or dd-mm-yyyy
+  const m1 = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(m1) {
+    const d = m1[1].padStart(2,'0'), mo = m1[2].padStart(2,'0'), y = m1[3];
+    return `${y}-${mo}-${d}`;
+  }
+  const parsedDate = new Date(str);
+  if(!isNaN(parsedDate)) {
+    const y = parsedDate.getFullYear(), m = String(parsedDate.getMonth()+1).padStart(2,'0'), d = String(parsedDate.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
+  return '';
+}
+
+function confirmImport() {
+  const monthCol = parseInt(document.getElementById('map_month').value);
+  const nameCol = parseInt(document.getElementById('map_name').value);
+  const amountCol = parseInt(document.getElementById('map_amount').value);
+  const dueDateCol = parseInt(document.getElementById('map_dueDate')?.value ?? '-1');
+  const noteCol = parseInt(document.getElementById('map_note')?.value ?? '-1');
+  const paidCol = parseInt(document.getElementById('map_paid')?.value ?? '-1');
+
+  let imported = 0;
+  let skipped = 0;
+
+  importPreviewData.forEach(row => {
+    const monthRaw = String(row[monthCol]||'').trim();
+    const nameRaw = String(row[nameCol]||'').trim();
+    const amountRaw = parseFloat(String(row[amountCol]||'0').replace(/[^0-9.]/g,''));
+
+    if(!nameRaw || isNaN(amountRaw) || amountRaw <= 0) { skipped++; return; }
+
+    // Normalize month
+    const month = normalizeMonth(monthRaw) || monthRaw || 'Januari';
+    const dueDate = dueDateCol >= 0 ? normalizeDueDate(row[dueDateCol]) : '';
+    const note = noteCol >= 0 && row[noteCol] ? String(row[noteCol]).trim() : '';
+    const paidRaw = paidCol >= 0 ? String(row[paidCol]||'').toLowerCase() : '';
+    const paid = paidRaw.includes('bayar') && !paidRaw.includes('belum') || paidRaw === 'true' || paidRaw === '1';
+
+    debts.push({ id: Date.now() + Math.random(), month, name: nameRaw, amount: amountRaw, dueDate, note, paid, addedAt: new Date().toISOString() });
+    imported++;
+  });
+
+  save();
+  cancelImport();
+  toast(`${imported} rekod berjaya diimport${skipped?' ('+skipped+' diskip)':''}`, '📊');
+  updateDashboard();
+  switchPage('page-dashboard');
+}
+
+function normalizeMonth(raw) {
+  const r = raw.toLowerCase().trim();
+  const map = {
+    'jan':'Januari','january':'Januari','1':'Januari',
+    'feb':'Februari','february':'Februari','2':'Februari',
+    'mac':'Mac','mar':'Mac','march':'Mac','3':'Mac',
+    'apr':'April','april':'April','4':'April',
+    'mei':'Mei','may':'Mei','5':'Mei',
+    'jun':'Jun','june':'Jun','6':'Jun',
+    'jul':'Julai','july':'Julai','julai':'Julai','7':'Julai',
+    'aug':'Ogos','ogos':'Ogos','ogs':'Ogos','8':'Ogos','august':'Ogos',
+    'sep':'September','sept':'September','september':'September','9':'September',
+    'okt':'Oktober','oct':'Oktober','oktober':'Oktober','october':'Oktober','10':'Oktober',
+    'nov':'November','november':'November','11':'November',
+    'dis':'Disember','dec':'Disember','disember':'Disember','december':'Disember','12':'Disember',
+  };
+  // Check full Malay names
+  const fullMatch = BULAN.find(b => b.toLowerCase() === r);
+  if(fullMatch) return fullMatch;
+  return map[r] || null;
+}
+
+// ─── EXPORT ──────────────────────────────────────────────────
+function exportExcel() {
+  if(!debts.length) { toast('Tiada data untuk eksport','⚠️'); return; }
+  const data = debts.map(d => ({
+    'Bulan': d.month,
+    'Penyedia': d.name,
+    'Jumlah (RM)': d.amount,
+    'Tarikh Akhir': d.dueDate ? fmtDueDate(d.dueDate) : '',
+    'Nota': d.note || '',
+    'Status Bayaran': d.paid ? 'SUDAH DIBAYAR' : 'BELUM DIBAYAR',
+    'Tarikh Ditambah': d.addedAt ? new Date(d.addedAt).toLocaleDateString('ms-MY') : '',
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(data);
+
+  // Style column widths
+  ws['!cols'] = [
+    {wch:12},{wch:20},{wch:14},{wch:16},{wch:20},{wch:16},{wch:16}
+  ];
+
+  // Add summary sheet
+  const bulanTotals = {};
+  BULAN.forEach(b => bulanTotals[b] = {total:0,paid:0,unpaid:0});
+  debts.forEach(d => {
+    if(bulanTotals[d.month]) {
+      bulanTotals[d.month].total += d.amount;
+      if(d.paid) bulanTotals[d.month].paid += d.amount;
+      else bulanTotals[d.month].unpaid += d.amount;
+    }
+  });
+  const summary = BULAN
+    .filter(b => bulanTotals[b].total > 0)
+    .map(b => ({
+      'Bulan': b,
+      'Jumlah Total (RM)': bulanTotals[b].total.toFixed(2),
+      'Sudah Dibayar (RM)': bulanTotals[b].paid.toFixed(2),
+      'Belum Dibayar (RM)': bulanTotals[b].unpaid.toFixed(2),
+    }));
+  const ws2 = XLSX.utils.json_to_sheet(summary);
+  ws2['!cols'] = [{wch:12},{wch:18},{wch:18},{wch:18}];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Rekod Hutang');
+  XLSX.utils.book_append_sheet(wb, ws2, 'Ringkasan Bulanan');
+  XLSX.writeFile(wb, `KiraHutang_${new Date().toLocaleDateString('ms-MY').replace(/\//g,'-')}.xlsx`);
+  toast('Fail Excel berjaya disimpan 📗');
+}
+
+function exportCSV() {
+  if(!debts.length) { toast('Tiada data','⚠️'); return; }
+  const header = ['Bulan','Penyedia','Jumlah (RM)','Tarikh Akhir','Nota','Status Bayaran'];
+  const rows = debts.map(d => [d.month, d.name, d.amount, d.dueDate ? fmtDueDate(d.dueDate) : '', d.note||'', d.paid?'SUDAH DIBAYAR':'BELUM DIBAYAR']);
+  const csv = [header,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `KiraHutang_${Date.now()}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV berjaya disimpan 📄');
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(debts,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `KiraHutang_backup_${Date.now()}.json`; a.click();
+  URL.revokeObjectURL(url);
+  toast('Backup JSON berjaya disimpan 🔧');
+}
+
+function importJSON() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        if(!Array.isArray(parsed)) throw new Error('Format tidak sah');
+        debts.push(...parsed.filter(d => d.name && d.amount && d.month));
+        save();
+        toast(`${parsed.length} rekod dipulihkan ♻️`);
+        updateDashboard();
+      } catch(err) {
+        toast('Gagal pulihkan: ' + err.message,'❌');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ─── EDIT MODAL ──────────────────────────────────────────────
+let editPaidStatus = false;
+
+function openEditModal(id) {
+  const debt = debts.find(d => d.id === id);
+  if(!debt) return;
+  document.getElementById('editId').value = id;
+  document.getElementById('editMonth').value = debt.month;
+  document.getElementById('editName').value = debt.name;
+  document.getElementById('editAmount').value = debt.amount;
+  document.getElementById('editDueDate').value = debt.dueDate || '';
+  document.getElementById('editNote').value = debt.note || '';
+  editPaidStatus = debt.paid;
+  updateEditStatusBtns();
+  document.getElementById('editModalOverlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeEditModal(e) {
+  if(e && e.target !== document.getElementById('editModalOverlay')) return;
+  document.getElementById('editModalOverlay').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function setEditStatus(paid) {
+  editPaidStatus = paid;
+  updateEditStatusBtns();
+}
+
+function updateEditStatusBtns() {
+  const unpaidBtn = document.getElementById('editStatusUnpaid');
+  const paidBtn = document.getElementById('editStatusPaid');
+  if(editPaidStatus) {
+    unpaidBtn.style.border = '2px solid var(--border)';
+    unpaidBtn.style.background = 'transparent';
+    unpaidBtn.style.color = 'var(--text3)';
+    paidBtn.style.border = '2px solid var(--green)';
+    paidBtn.style.background = 'var(--green-dim)';
+    paidBtn.style.color = 'var(--green)';
+  } else {
+    unpaidBtn.style.border = '2px solid var(--red)';
+    unpaidBtn.style.background = 'var(--red-dim)';
+    unpaidBtn.style.color = 'var(--red)';
+    paidBtn.style.border = '2px solid var(--border)';
+    paidBtn.style.background = 'transparent';
+    paidBtn.style.color = 'var(--text3)';
+  }
+}
+
+function saveEdit() {
+  const id = parseFloat(document.getElementById('editId').value);
+  const debt = debts.find(d => d.id === id);
+  if(!debt) return;
+  const newAmount = parseFloat(document.getElementById('editAmount').value);
+  if(!newAmount || newAmount <= 0) { toast('Jumlah tidak sah!','⚠️'); return; }
+
+  debt.month = document.getElementById('editMonth').value;
+  debt.name = document.getElementById('editName').value;
+  debt.amount = newAmount;
+  debt.dueDate = document.getElementById('editDueDate').value || '';
+  debt.note = document.getElementById('editNote').value.trim();
+  debt.paid = editPaidStatus;
+
+  save();
+  closeEditModal();
+  document.body.style.overflow = '';
+  renderTransactions();
+  updateDashboard();
+  toast('Rekod berjaya dikemaskini ✓','✏️');
+}
+
+function deleteFromEdit() {
+  const id = parseFloat(document.getElementById('editId').value);
+  if(!confirm('Padam rekod ini?')) return;
+  debts = debts.filter(d => d.id !== id);
+  save();
+  closeEditModal();
+  document.body.style.overflow = '';
+  renderTransactions();
+  updateDashboard();
+  toast('Rekod dipadam','🗑️');
+}
+
+// ─── DRAG & DROP ─────────────────────────────────────────────
+const dropZone = document.getElementById('importDrop');
+['dragenter','dragover'].forEach(ev => dropZone.addEventListener(ev, e => {
+  e.preventDefault(); dropZone.classList.add('drag-over');
+}));
+['dragleave','drop'].forEach(ev => dropZone.addEventListener(ev, e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+}));
+dropZone.addEventListener('drop', e => {
+  const file = e.dataTransfer.files[0];
+  if(file) {
+    const fakeEvt = { target: { files: [file], value:'' } };
+    handleFileImport(fakeEvt);
+  }
+});
+
+// ─── PWA INSTALL ─────────────────────────────────────────────
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const banner = document.getElementById('installBanner');
+  banner.style.display = 'flex';
+  // Move banner inside dashboard
+  document.getElementById('dashContent').prepend(banner);
+});
+
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if(outcome === 'accepted') {
+    toast('KiraHutang berjaya dipasang! 🎉');
+    document.getElementById('installBanner').style.display = 'none';
+  }
+  deferredPrompt = null;
+});
+
+// ─── SERVICE WORKER ──────────────────────────────────────────
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+
+// ─── AUTO-SET CURRENT MONTH ──────────────────────────────────
+(function() {
+  const now = new Date();
+  const monthSel = document.getElementById('addMonth');
+  monthSel.value = BULAN[now.getMonth()];
+})();
+
+// ─── INIT ────────────────────────────────────────────────────
+updateDashboard();
+</script>
+</body>
+</html>
