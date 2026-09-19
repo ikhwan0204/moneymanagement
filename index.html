@@ -246,18 +246,19 @@ body::before {
 /* ── PROVIDER PILLS ── */
 .provider-breakdown { margin: 0 16px 14px; }
 .provider-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid var(--border);
 }
 .provider-row:last-child { border-bottom: none; }
+.provider-row-top { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+.provider-row-bottom { display: flex; align-items: center; gap: 10px; }
 .provider-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .provider-name { flex: 1; font-size: 13px; font-weight: 600; }
-.provider-bar-wrap { width: 80px; height: 4px; background: var(--surface2); border-radius: 4px; }
+.provider-bar-wrap { flex: 1; height: 4px; background: var(--surface2); border-radius: 4px; }
 .provider-bar { height: 4px; border-radius: 4px; transition: width 0.5s ease; }
 .provider-amt { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; min-width: 72px; text-align: right; }
+.provider-baki { font-size: 11px; font-weight: 700; color: var(--red); min-width: 108px; text-align: right; flex-shrink: 0; }
+.provider-baki.done { color: var(--green); }
 
 /* ── SECTION TITLE ── */
 .section-title {
@@ -949,7 +950,7 @@ body::before {
     </div>
 
     <!-- Mini Chart -->
-    <div class="section-title">Carta Bulanan</div>
+    <div class="section-title">Carta Bulanan <span id="chartYearLabel" style="color:var(--text3);font-weight:600;"></span></div>
     <div class="mini-chart" id="miniChart"></div>
 
     <!-- Provider Breakdown -->
@@ -976,6 +977,12 @@ body::before {
   <div class="page-header">
     <h1>Transaksi</h1>
     <p>Semua rekod pembayaran anda</p>
+  </div>
+
+  <!-- Year filter -->
+  <div style="display:flex;align-items:center;gap:10px;margin:0 16px 12px;">
+    <label class="form-label" style="margin-bottom:0;white-space:nowrap;">Tahun</label>
+    <select id="yearFilterSelect" class="form-select" style="padding:10px 14px;font-size:14px;"></select>
   </div>
 
   <!-- Filter tabs -->
@@ -1012,13 +1019,19 @@ body::before {
   </div>
 
   <div class="card">
-    <div class="form-group">
-      <label class="form-label">Bulan</label>
-      <select id="addMonth" class="form-select">
-        <option>Januari</option><option>Februari</option><option>Mac</option><option>April</option>
-        <option>Mei</option><option>Jun</option><option>Julai</option><option>Ogos</option>
-        <option>September</option><option>Oktober</option><option>November</option><option>Disember</option>
-      </select>
+    <div style="display:flex;gap:10px;">
+      <div class="form-group" style="flex:1;">
+        <label class="form-label">Bulan</label>
+        <select id="addMonth" class="form-select">
+          <option>Januari</option><option>Februari</option><option>Mac</option><option>April</option>
+          <option>Mei</option><option>Jun</option><option>Julai</option><option>Ogos</option>
+          <option>September</option><option>Oktober</option><option>November</option><option>Disember</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex:1;">
+        <label class="form-label">Tahun</label>
+        <select id="addYear" class="form-select"></select>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">Penyedia</label>
@@ -1145,13 +1158,19 @@ body::before {
     </div>
     <div class="edit-modal-body">
       <input type="hidden" id="editId">
-      <div class="form-group">
-        <label class="form-label">Bulan</label>
-        <select id="editMonth" class="form-select">
-          <option>Januari</option><option>Februari</option><option>Mac</option><option>April</option>
-          <option>Mei</option><option>Jun</option><option>Julai</option><option>Ogos</option>
-          <option>September</option><option>Oktober</option><option>November</option><option>Disember</option>
-        </select>
+      <div style="display:flex;gap:10px;">
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Bulan</label>
+          <select id="editMonth" class="form-select">
+            <option>Januari</option><option>Februari</option><option>Mac</option><option>April</option>
+            <option>Mei</option><option>Jun</option><option>Julai</option><option>Ogos</option>
+            <option>September</option><option>Oktober</option><option>November</option><option>Disember</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label class="form-label">Tahun</label>
+          <select id="editYear" class="form-select"></select>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Penyedia</label>
@@ -1230,7 +1249,16 @@ let debts = JSON.parse(localStorage.getItem('kirahutang-v2') || '[]');
 let importPreviewData = [];
 let importRawData = [];
 let currentFilter = 'all';
+let currentYearFilter = 'all';
 let deferredPrompt = null;
+
+// Migrate legacy records (no year saved) — assume current year
+(function migrateYears() {
+  const curYear = new Date().getFullYear();
+  let changed = false;
+  debts.forEach(d => { if(!d.year) { d.year = curYear; changed = true; } });
+  if(changed) localStorage.setItem('kirahutang-v2', JSON.stringify(debts));
+})();
 
 const BULAN = ["Januari","Februari","Mac","April","Mei","Jun","Julai","Ogos","September","Oktober","November","Disember"];
 const BULAN_SHORT = ["Jan","Feb","Mac","Apr","Mei","Jun","Jul","Ogs","Sep","Okt","Nov","Dis"];
@@ -1328,16 +1356,18 @@ function toast(msg, icon='✅') {
 // ─── ADD DEBT ────────────────────────────────────────────────
 function addDebt() {
   const month = document.getElementById('addMonth').value;
+  const year = parseInt(document.getElementById('addYear').value) || new Date().getFullYear();
   const name = document.getElementById('addName').value;
   const amount = parseFloat(document.getElementById('addAmount').value);
   const dueDate = document.getElementById('addDueDate').value || '';
   const note = document.getElementById('addNote').value.trim();
   if(!amount || amount <= 0) { toast('Masukkan jumlah yang sah!','⚠️'); return; }
-  debts.push({ id: Date.now(), month, name, amount, dueDate, note, paid: false, addedAt: new Date().toISOString() });
+  debts.push({ id: Date.now(), month, year, name, amount, dueDate, note, paid: false, addedAt: new Date().toISOString() });
   save();
   document.getElementById('addAmount').value = '';
   document.getElementById('addDueDate').value = '';
   document.getElementById('addNote').value = '';
+  populateYearFormSelect('addYear', new Date().getFullYear());
   toast(`${name} — RM ${amount.toFixed(2)} ditambah!`);
   switchPage('page-dashboard');
 }
@@ -1351,9 +1381,9 @@ function togglePaid(id) {
   renderTransactions();
   updateDashboard();
 
-  // Calculate remaining unpaid for that month
+  // Calculate remaining unpaid for that month (same year)
   const monthUnpaid = debts
-    .filter(d => d.month === debt.month && !d.paid)
+    .filter(d => d.month === debt.month && (d.year||new Date().getFullYear()) === (debt.year||new Date().getFullYear()) && !d.paid)
     .reduce((s,d) => s + d.amount, 0);
 
   if(debt.paid) {
@@ -1398,7 +1428,8 @@ function updateDashboard() {
   const paid = debts.filter(d => d.paid);
   const unpaidTotal = unpaid.reduce((s,d) => s + d.amount, 0);
   const paidPct = total > 0 ? Math.round((paid.reduce((s,d)=>s+d.amount,0)/total)*100) : 0;
-  const curMonth = debts.filter(d => d.month === curMonthName).reduce((s,d)=>s+d.amount,0);
+  const curYearNum = now.getFullYear();
+  const curMonth = debts.filter(d => d.month === curMonthName && (d.year||curYearNum) === curYearNum).reduce((s,d)=>s+d.amount,0);
   const maxDebt = debts.length ? Math.max(...debts.map(d=>d.amount)) : 0;
   const avg = debts.length ? total/debts.length : 0;
 
@@ -1425,6 +1456,36 @@ function updateDashboard() {
 
 function fmtNum(n) {
   return Number(n).toLocaleString('ms-MY', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+// ─── YEAR HELPERS ────────────────────────────────────────────
+function getAvailableYears() {
+  const curYear = new Date().getFullYear();
+  const years = new Set([curYear]);
+  debts.forEach(d => years.add(d.year || curYear));
+  return [...years].sort((a,b) => b-a);
+}
+
+// Populate Tahun <select> for Tambah/Edit forms (range covers old + upcoming years)
+function populateYearFormSelect(selectId, selectedYear) {
+  const curYear = new Date().getFullYear();
+  const years = new Set([curYear]);
+  getAvailableYears().forEach(y => years.add(y));
+  for(let y = curYear - 6; y <= curYear + 1; y++) years.add(y);
+  const sorted = [...years].sort((a,b) => b-a);
+  const sel = document.getElementById(selectId);
+  sel.innerHTML = sorted.map(y => `<option value="${y}">${y}</option>`).join('');
+  sel.value = selectedYear || curYear;
+}
+
+// Populate the "Tahun" filter dropdown on the Transactions page
+function populateYearFilterSelect() {
+  const sel = document.getElementById('yearFilterSelect');
+  const prev = currentYearFilter;
+  const years = getAvailableYears();
+  sel.innerHTML = '<option value="all">Semua Tahun</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+  sel.value = years.includes(Number(prev)) ? prev : 'all';
+  currentYearFilter = sel.value;
 }
 
 // ─── OVERDUE ALERT ───────────────────────────────────────────
@@ -1471,13 +1532,15 @@ function renderUpcomingDue() {
 
 function renderMiniChart() {
   const chart = document.getElementById('miniChart');
+  const now = new Date();
+  const curYearNum = now.getFullYear();
   const monthTotals = {};
   BULAN.forEach((b,i) => monthTotals[b] = { val:0, idx:i });
-  debts.forEach(d => { if(monthTotals[d.month]) monthTotals[d.month].val += d.amount; });
+  debts.forEach(d => { if(monthTotals[d.month] && (d.year||curYearNum) === curYearNum) monthTotals[d.month].val += d.amount; });
   const vals = BULAN.map(b => monthTotals[b].val);
   const maxVal = Math.max(...vals, 1);
-  const now = new Date();
   const curMonthIdx = now.getMonth();
+  document.getElementById('chartYearLabel').textContent = `· ${curYearNum}`;
 
   chart.innerHTML = BULAN.map((b,i) => {
     const h = Math.max(4, Math.round((vals[i]/maxVal)*54));
@@ -1492,19 +1555,31 @@ function renderMiniChart() {
 function renderProviderBreakdown() {
   const wrap = document.getElementById('providerBreakdown');
   const totals = {};
-  debts.forEach(d => { totals[d.name] = (totals[d.name]||0) + d.amount; });
+  const bakiTotals = {};
+  debts.forEach(d => {
+    totals[d.name] = (totals[d.name]||0) + d.amount;
+    if(!d.paid) bakiTotals[d.name] = (bakiTotals[d.name]||0) + d.amount;
+  });
   const sorted = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
   if(!sorted.length) { wrap.innerHTML='<div class="empty-state"><p>Belum ada data</p></div>'; return; }
-  const max = sorted[0][1];
-  wrap.innerHTML = sorted.map(([name,val]) => {
-    const pct = Math.round((val/max)*100);
+  wrap.innerHTML = sorted.map(([name,total]) => {
+    const baki = bakiTotals[name] || 0;
+    const paidPct = total > 0 ? Math.round(((total-baki)/total)*100) : 0;
     const color = PROVIDER_COLORS[name] || '#9090b8';
     const icon = PROVIDER_ICONS[name] || '📦';
+    const bakiHtml = baki > 0
+      ? `<div class="provider-baki">Baki RM ${fmtNum(baki)}</div>`
+      : `<div class="provider-baki done">Selesai ✓</div>`;
     return `<div class="provider-row">
-      <div class="provider-dot" style="background:${color}"></div>
-      <div class="provider-name">${icon} ${name}</div>
-      <div class="provider-bar-wrap"><div class="provider-bar" style="width:${pct}%;background:${color}"></div></div>
-      <div class="provider-amt" style="color:${color}">RM ${fmtNum(val)}</div>
+      <div class="provider-row-top">
+        <div class="provider-dot" style="background:${color}"></div>
+        <div class="provider-name">${icon} ${name}</div>
+        <div class="provider-amt" style="color:${color}">RM ${fmtNum(total)}</div>
+      </div>
+      <div class="provider-row-bottom">
+        <div class="provider-bar-wrap"><div class="provider-bar" style="width:${paidPct}%;background:${color}"></div></div>
+        ${bakiHtml}
+      </div>
     </div>`;
   }).join('');
 }
@@ -1561,7 +1636,11 @@ function txRow(d) {
 
 // ─── TRANSACTIONS PAGE ───────────────────────────────────────
 function renderTransactions() {
+  populateYearFilterSelect();
+  const curYearNum = new Date().getFullYear();
+
   let filtered = [...debts];
+  if(currentYearFilter !== 'all') filtered = filtered.filter(d => (d.year||curYearNum) === Number(currentYearFilter));
   if(currentFilter === 'unpaid') filtered = filtered.filter(d=>!d.paid);
   else if(currentFilter === 'overdue') filtered = filtered.filter(d=>isOverdue(d));
   else if(currentFilter === 'paid') filtered = filtered.filter(d=>d.paid);
@@ -1573,40 +1652,43 @@ function renderTransactions() {
     return;
   }
 
-  // Group by month in order
-  const grouped = {};
-  BULAN.forEach(b => { grouped[b] = []; });
-  filtered.forEach(d => { if(grouped[d.month]) grouped[d.month].push(d); });
+  // Group by year then month, newest year first, calendar order within year
+  const years = [...new Set(filtered.map(d => d.year||curYearNum))].sort((a,b)=>b-a);
+  const showYearInTitle = currentYearFilter === 'all' && years.length > 1;
 
   let html = '';
-  BULAN.forEach(b => {
-    const items = grouped[b];
-    if(!items.length) return;
-    const total = items.reduce((s,d)=>s+d.amount,0);
-    const paidAmt = items.filter(d=>d.paid).reduce((s,d)=>s+d.amount,0);
-    const unpaidAmt = total - paidAmt;
-    const unpaidCount = items.filter(d=>!d.paid).length;
-    const paidCount = items.filter(d=>d.paid).length;
-    const allPaid = unpaidAmt === 0;
+  years.forEach(y => {
+    const yearItems = filtered.filter(d => (d.year||curYearNum) === y);
+    BULAN.forEach(b => {
+      const items = yearItems.filter(d => d.month === b);
+      if(!items.length) return;
+      const total = items.reduce((s,d)=>s+d.amount,0);
+      const paidAmt = items.filter(d=>d.paid).reduce((s,d)=>s+d.amount,0);
+      const unpaidAmt = total - paidAmt;
+      const unpaidCount = items.filter(d=>!d.paid).length;
+      const paidCount = items.filter(d=>d.paid).length;
+      const allPaid = unpaidAmt === 0;
+      const titleLabel = showYearInTitle ? `${b} ${y}` : b;
 
-    html += `<div class="month-card open">
-      <div class="month-card-header" onclick="this.parentElement.classList.toggle('open')">
-        <div>
-          <div class="month-card-title">${b} ${allPaid ? '✅' : ''}</div>
-          <div class="month-balance-wrap" style="margin-top:4px;">
-            ${unpaidCount > 0 ? `<span class="month-bal-chip unpaid">RM ${fmtNum(unpaidAmt)} belum bayar</span>` : ''}
-            ${paidCount > 0 ? `<span class="month-bal-chip paid">RM ${fmtNum(paidAmt)} selesai</span>` : ''}
+      html += `<div class="month-card open">
+        <div class="month-card-header" onclick="this.parentElement.classList.toggle('open')">
+          <div>
+            <div class="month-card-title">${titleLabel} ${allPaid ? '✅' : ''}</div>
+            <div class="month-balance-wrap" style="margin-top:4px;">
+              ${unpaidCount > 0 ? `<span class="month-bal-chip unpaid">RM ${fmtNum(unpaidAmt)} belum bayar</span>` : ''}
+              ${paidCount > 0 ? `<span class="month-bal-chip paid">RM ${fmtNum(paidAmt)} selesai</span>` : ''}
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div class="month-card-total">RM ${fmtNum(total)}</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px;">${items.length} rekod</div>
           </div>
         </div>
-        <div style="text-align:right;">
-          <div class="month-card-total">RM ${fmtNum(total)}</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px;">${items.length} rekod</div>
+        <div class="month-card-body">
+          ${items.slice().reverse().map(d => txRow(d)).join('')}
         </div>
-      </div>
-      <div class="month-card-body">
-        ${items.slice().reverse().map(d => txRow(d)).join('')}
-      </div>
-    </div>`;
+      </div>`;
+    });
   });
   container.innerHTML = html;
 }
@@ -1616,6 +1698,12 @@ document.getElementById('filterTabs').addEventListener('click', e => {
   const tab = e.target.closest('.filter-tab');
   if(!tab) return;
   setFilter(tab.dataset.filter);
+});
+
+// Year filter dropdown change
+document.getElementById('yearFilterSelect').addEventListener('change', e => {
+  currentYearFilter = e.target.value;
+  renderTransactions();
 });
 
 // ─── IMPORT ──────────────────────────────────────────────────
@@ -1766,7 +1854,7 @@ function confirmImport() {
     const paidRaw = paidCol >= 0 ? String(row[paidCol]||'').toLowerCase() : '';
     const paid = paidRaw.includes('bayar') && !paidRaw.includes('belum') || paidRaw === 'true' || paidRaw === '1';
 
-    debts.push({ id: Date.now() + Math.random(), month, name: nameRaw, amount: amountRaw, dueDate, note, paid, addedAt: new Date().toISOString() });
+    debts.push({ id: Date.now() + Math.random(), month, year: new Date().getFullYear(), name: nameRaw, amount: amountRaw, dueDate, note, paid, addedAt: new Date().toISOString() });
     imported++;
   });
 
@@ -1880,7 +1968,8 @@ function importJSON() {
       try {
         const parsed = JSON.parse(ev.target.result);
         if(!Array.isArray(parsed)) throw new Error('Format tidak sah');
-        debts.push(...parsed.filter(d => d.name && d.amount && d.month));
+        const curYearNum = new Date().getFullYear();
+        debts.push(...parsed.filter(d => d.name && d.amount && d.month).map(d => ({ ...d, year: d.year || curYearNum })));
         save();
         toast(`${parsed.length} rekod dipulihkan ♻️`);
         updateDashboard();
@@ -1901,6 +1990,7 @@ function openEditModal(id) {
   if(!debt) return;
   document.getElementById('editId').value = id;
   document.getElementById('editMonth').value = debt.month;
+  populateYearFormSelect('editYear', debt.year);
   document.getElementById('editName').value = debt.name;
   document.getElementById('editAmount').value = debt.amount;
   document.getElementById('editDueDate').value = debt.dueDate || '';
@@ -1950,6 +2040,7 @@ function saveEdit() {
   if(!newAmount || newAmount <= 0) { toast('Jumlah tidak sah!','⚠️'); return; }
 
   debt.month = document.getElementById('editMonth').value;
+  debt.year = parseInt(document.getElementById('editYear').value) || debt.year || new Date().getFullYear();
   debt.name = document.getElementById('editName').value;
   debt.amount = newAmount;
   debt.dueDate = document.getElementById('editDueDate').value || '';
@@ -2018,11 +2109,12 @@ if('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
 
-// ─── AUTO-SET CURRENT MONTH ──────────────────────────────────
+// ─── AUTO-SET CURRENT MONTH & YEAR ────────────────────────────
 (function() {
   const now = new Date();
   const monthSel = document.getElementById('addMonth');
   monthSel.value = BULAN[now.getMonth()];
+  populateYearFormSelect('addYear', now.getFullYear());
 })();
 
 // ─── INIT ────────────────────────────────────────────────────
